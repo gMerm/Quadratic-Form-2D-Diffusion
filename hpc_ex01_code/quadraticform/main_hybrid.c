@@ -3,9 +3,19 @@
 #include <stdlib.h>
 #include <time.h>
 #include <omp.h>
+#include <mpi.h>
 
 int main(int argc, char** argv)
-{
+{	
+	//starting the mpi 
+	MPI_Init(&argc, &argv);
+	int rank;
+	int size;
+	MPI_Comm_rank(MPI_COMM_WORLD,&rank);
+	MPI_Comm_rank(MPI_COMM_WORLD,&size);
+
+	
+
     int n = 16384;
 
     if (argc == 2)
@@ -76,6 +86,10 @@ int main(int argc, char** argv)
     free(A);
     free(v);
     free(w);
+
+
+	//terminating the mpi_comm_world
+	MPI_Finalize();
 
     return 0;
 }

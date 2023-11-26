@@ -1,4 +1,4 @@
-CC=gcc-13
+CC=mpicc
 CFLAGS=-O2 -Wall
 LDFLAGS=-fopenmp
 
