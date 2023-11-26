@@ -1,8 +1,8 @@
-CC=gcc
+CC=gcc-13
 CFLAGS=-O2 -Wall
-LDFLAGS=
+LDFLAGS=-fopenmp
 
-ALL=qf_seq qf_hybrid
+ALL=qf_seq qf_hybrid main_hybrid
 
 all: $(ALL)
 
@@ -12,6 +12,8 @@ qf_seq: qf_seq.c
 qf_hybrid: qf_hybrid.c
 	$(CC) $(CFLAGS) -o qf_hybrid qf_hybrid.c $(LDFLAGS)
 
+main_hybrid: main_hybrid.c
+	$(CC) $(CFLAGS) -o main_hybrid main_hybrid.c  $(LDFLAGS) 
 
 .PHONY: clean
 clean:
