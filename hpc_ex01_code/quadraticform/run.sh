@@ -1,9 +1,9 @@
 make clean
 make
 
-echo "\nexecuting serial"
+echo "\nExecuting Serial: \n"
 
 time ./qf_seq
 
-echo "\executing parallel"
+echo "\nExecuting Parallel: \n"
 ./main_hybrid

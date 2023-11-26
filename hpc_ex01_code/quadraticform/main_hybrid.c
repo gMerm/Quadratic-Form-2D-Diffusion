@@ -1,6 +1,7 @@
 // sequential code
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <omp.h>
 
 int main(int argc, char** argv)
@@ -15,8 +16,9 @@ int main(int argc, char** argv)
 	double *v = (double *)malloc(n*sizeof(double));
 	double *w = (double *)malloc(n*sizeof(double));
 
-	double start; 
-	double end; 
+	double start,end; 
+	double startA, endA;
+	double startRes, endRes;
 	double result = 0.;
 	start = omp_get_wtime(); 
 
@@ -25,10 +27,13 @@ int main(int argc, char** argv)
 
 		#pragma omp single
 		{
+			startA=omp_get_wtime();
 			/// init A_ij = (i + 2*j) / n^2
 			for (int i=0; i<n; ++i)
 				for (int j=0; j<n; ++j)
 					A[i*n+j] = (i + 2.0*j) / (n*n);
+			
+			endA=omp_get_wtime();
 		}
 
 		#pragma omp single
@@ -48,16 +53,19 @@ int main(int argc, char** argv)
 		#pragma omp barrier
 		/// compute
 		#pragma omp master
-		{
+		{	
+			startRes=omp_get_wtime();
 			for (int i=0; i<n; ++i)
 				for (int j=0; j<n; ++j)
 					result += v[i] * A[i*n + j] * w[j];
+
+			endRes=omp_get_wtime();
 		}
 	}
-	
+
 	end = omp_get_wtime();
 
-	printf("Result = %lf\nTime = %lf\n", result, end-start);
+	printf("Result = %lf\nTime = %lf\nAxA = %lf\nResult Time = %lf\n", result, end-start, endA-startA, endRes-startRes);
 
 	/// free memory
 	free(A);
