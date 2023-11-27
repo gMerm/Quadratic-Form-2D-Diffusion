@@ -1,6 +1,6 @@
-CC=gcc-13
-CFLAGS=-O2 -Wall
-LDFLAGS=-fopenmp
+CC=mpicc
+CFLAGS=-O2 -Wall -I/opt/homebrew/opt/libomp/include
+LDFLAGS=-L/opt/homebrew/opt/libomp/lib -Xpreprocessor -fopenmp -lomp
 
 ALL=qf_seq qf_hybrid main_hybrid
 
