@@ -8,7 +8,7 @@ int main(int argc, char** argv)
 {	
 
     int n = 16384;
-
+    
     if (argc == 2)
         n = atoi(argv[1]);
 

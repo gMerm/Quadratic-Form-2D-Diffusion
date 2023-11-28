@@ -50,6 +50,9 @@ void initialize_density(Diffusion2D *D2D)
     }
 }
 
+
+//The init function initializes the Diffusion2D structure, 
+//including allocating memory for density arrays and setting up parameters.
 void init(Diffusion2D *D2D,
                 const double D,
                 const double L,
@@ -97,6 +100,10 @@ void init(Diffusion2D *D2D,
     initialize_density(D2D);
 }
 
+
+//The advance function performs the time-stepping of the simulation. 
+//It exchanges ghost cells, updates the interior of the local domain using the diffusion equation,
+//and swaps pointers to avoid unnecessary copying of data.
 void advance(Diffusion2D *D2D)
 {
     int N_ = D2D->N_;
@@ -191,6 +198,10 @@ void advance(Diffusion2D *D2D)
     D2D->rho_ = tmp_;
 }
 
+
+//The code computes diagnostics at each time step, including the total heat in the system. 
+//The compute_diagnostics function uses MPI reduction (MPI_Reduce) 
+//to gather the total heat across all ranks.
 void compute_diagnostics(Diffusion2D *D2D, const int step, const double t)
 {
     int N_ = D2D->N_;
@@ -218,6 +229,7 @@ void compute_diagnostics(Diffusion2D *D2D, const int step, const double t)
     }
 }
 
+
 void write_diagnostics(Diffusion2D *D2D, const char *filename)
 {
 
@@ -228,6 +240,8 @@ void write_diagnostics(Diffusion2D *D2D, const char *filename)
 }
 
 
+//The main function initializes MPI, calls the initialization function, 
+//performs the time-stepping loop, computes diagnostics, and writes the results to a file.
 int main(int argc, char* argv[])
 {
     if (argc < 6) {

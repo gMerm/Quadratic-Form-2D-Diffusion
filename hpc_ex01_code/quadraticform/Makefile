@@ -16,7 +16,7 @@ main_hybrid: main_hybrid.c
 	gcc-13 -O2 -Wall -o main_hybrid main_hybrid.c -fopenmp
 
 main_hybrid_mpi: main_hybrid_mpi.c
-	mpicc $(CFLAGS) -o main_hybrid_mpi main_hybrid_mpi.c  $(LDFLAGS) 
+	$(CC) $(CFLAGS) -o executable main_hybrid_mpi.c  $(LDFLAGS) 
 
 .PHONY: clean
 clean:

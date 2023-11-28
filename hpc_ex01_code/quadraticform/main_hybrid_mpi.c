@@ -20,7 +20,7 @@ int main(int argc, char** argv)
 	
 	if(rank==0){
 		printf("I'm rank: %d\n", rank);
-		double n_rankMaster=(n/2);
+		int n_rankMaster=(n/2);
 
 		// allocate memory
 		double *A = (double *)malloc(n*n*sizeof(double));
@@ -79,6 +79,7 @@ int main(int argc, char** argv)
 		double res_from_rank1=0.;
 
 		//receive from rank1 the other half of the result
+		MPI_Status status;
 		MPI_Recv(&res_from_rank1, sizeof(double), MPI_DOUBLE, 1, 98, MPI_COMM_WORLD, &status);
 
 
@@ -98,9 +99,10 @@ int main(int argc, char** argv)
 
 	}else{
 		printf("I'm rank: %d\n", rank);
-		double n_size=0.;
+		int n_size=0.;
 
 		//receive n partition
+		MPI_Status status;
 		MPI_Recv(&n_size, sizeof(double), MPI_DOUBLE, 0, 88, MPI_COMM_WORLD, &status);
 
 		//allocate memory

@@ -7,3 +7,6 @@ time ./qf_seq
 
 echo "\nExecuting Parallel: \n"
 time ./main_hybrid
+
+echo "\nExecuting MPI Parallel: \n"
+time ./executable
