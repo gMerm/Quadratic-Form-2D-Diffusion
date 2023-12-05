@@ -23,6 +23,10 @@ typedef struct Diffusion2D_s
     Diagnostics *diag_;
 } Diffusion2D;
 
+
+//GETS CALLED BY init, IT USES D2D POINTER STRUCT TO EXTRACT ITS VALUES AND PUT THEM
+//INTO THE LOCAL VARIABLES, COMPUTES bound AND gi, AND WITH A DOUBLE FOR LOOP
+//IT FILLS THE rho_ WITH 0 OR 1.
 void initialize_density(Diffusion2D *D2D)
 {
     int real_N_ = D2D->real_N_;
@@ -50,6 +54,10 @@ void initialize_density(Diffusion2D *D2D)
     }
 }
 
+
+//TAKES THE ARGUMENTS THE USER GIVES, PUTS THEM INTO A POINTER STRCUT
+//D2D THAT IS USED THW WHOLE TIME, CALLOCS MEMORY FOR rho,rho_tmp_ AND diag_
+//COMPUTES AND PRINTS timestep from stability condition AND CALLS initialize_density
 void init(Diffusion2D *D2D,
                 const double D,
                 const double L,
@@ -97,6 +105,14 @@ void init(Diffusion2D *D2D,
     initialize_density(D2D);
 }
 
+
+
+//CALLED BY MAIN AFTER ALL THE VARIABLES HAVE BEEN INITIALIZED FROM
+//init AND initialize_density FUNCTIONS
+//EXCHANGE OF THE GHOST CELLS BETWEEN NEIGHBOORING RANKS IS BEING DONE &&
+//THEN THE CENTRAL SPACES (NOT THE NEIGHBOORING ONES) ARE BEING CREATED (rho_tmp_)
+//UPDATE FIRST AND LAST ROW OF EACH RANK(rho_tmp_)
+//AND rho_ IS BEING SWAPPED WITH rho_tmp_ AND THE NEW ONE IS USED
 void advance(Diffusion2D *D2D)
 {
     int N_ = D2D->N_;
@@ -186,6 +202,10 @@ void advance(Diffusion2D *D2D)
     D2D->rho_ = tmp_;
 }
 
+
+
+//CALLED AFTER THE advance FUNCTION IS EXECUTED
+//EVERY RANK COMPUTES ITS heat AND SENDS IT TO THE rank 0
 void compute_diagnostics(Diffusion2D *D2D, const int step, const double t)
 {
     int N_ = D2D->N_;
@@ -213,6 +233,8 @@ void compute_diagnostics(Diffusion2D *D2D, const int step, const double t)
     }
 }
 
+
+//TAKES THE DIAGNOSTICS AND WRITES THEM TO A .dat FILE
 void write_diagnostics(Diffusion2D *D2D, const char *filename)
 {
 
@@ -221,6 +243,7 @@ void write_diagnostics(Diffusion2D *D2D, const char *filename)
         fprintf(out_file, "%f\t%f\n", D2D->diag_[i].time, D2D->diag_[i].heat);
     fclose(out_file);
 }
+
 
 
 int main(int argc, char* argv[])

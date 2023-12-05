@@ -28,6 +28,8 @@ diffusion2d_mpi_nb_io: diffusion2d_mpi_nb_io.c
 clean:
 	rm -f diffusion2d_mpi diffusion2d_mpi_nb diffusion2d_mpi_nb_io *.dat
 	rm -rf *.dSYM
+	rm -r density_mpi.bin 
+	rm -r density_seq.bin
 
 
 # Execution examples
@@ -38,5 +40,5 @@ clean:
 
 
 # For testing and visualization
-# mpirun -n 1 ./diffusion2d_mpi_nb 1 1 128 50000 0.00001
+# mpirun -n 1 ./diffusion2d_mpi_nb 1 1 128 50000 0.00001	
 # mpirun -n 4 ./diffusion2d_mpi_nb 1 1 128 50000 0.00001
