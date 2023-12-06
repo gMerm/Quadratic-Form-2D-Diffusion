@@ -10,6 +10,8 @@ ifeq "$(dump)" "1"
   CFLAGS += -D_DUMP_DENSITY_
 endif
 
+#flag for the zlib
+LIBS=-lz
 
 CFLAGS+=-Wall -O2
 CFLAGS_THREADS=$(CFLAGS) -fopenmp
@@ -23,14 +25,14 @@ diffusion2d_mpi_nb: diffusion2d_mpi_nb.c
 	$(MPICC) $(CFLAGS) -o $@ $<
 
 diffusion2d_mpi_nb_io: diffusion2d_mpi_nb_io.c
-	$(MPICC) $(CFLAGS) -o $@ $<
+	$(MPICC) $(CFLAGS) -o $@ $< $(LIBS)
 
 clean:
 	rm -f diffusion2d_mpi diffusion2d_mpi_nb diffusion2d_mpi_nb_io *.dat
 	rm -rf *.dSYM
 	rm -r density_mpi.bin 
 	rm -r density_seq.bin
-
+	rm -r density_mpi_decompressed.bin
 
 # Execution examples
 
