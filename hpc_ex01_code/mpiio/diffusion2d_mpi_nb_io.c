@@ -351,7 +351,7 @@ void write_density_mpi_compressed(Diffusion2D *D2D, char *filename){
     size_t compressed_size = compressBound(uncompressed_size);
     unsigned char *compressed_buffer = (unsigned char*)malloc(compressed_size);
 
-    //compress buffer
+    //compress buffer, same as the praxis done in write_density_mpi
     compress_data(rho_ + real_N_, uncompressed_size, compressed_buffer, &compressed_size);
 
     
@@ -381,7 +381,7 @@ void decompress_and_write(const void* src, size_t src_size, const char* output_f
     stream.avail_in = src_size;
     stream.next_in = (Bytef*)src;
 
-    FILE* output_fp = fopen(output_filename, "wb");
+    FILE* output_fp = fopen(output_filename, "ab");
     if (!output_fp) {
         perror("Error opening output file");
         inflateEnd(&stream);
@@ -389,11 +389,12 @@ void decompress_and_write(const void* src, size_t src_size, const char* output_f
     }
 
     unsigned char buffer[1024];
+    int ret;
     do {
         stream.avail_out = sizeof(buffer);
         stream.next_out = buffer;
 
-        int ret = inflate(&stream, Z_NO_FLUSH);
+        ret = inflate(&stream, Z_FINISH);
         if (ret == Z_STREAM_ERROR) {
             perror("Error during decompression");
             inflateEnd(&stream);
@@ -490,6 +491,44 @@ int main(int argc, char* argv[])
 
 
     }
+
+    if (procs > 1) {
+        const char* compressedFile = "density_mpi_compressed.bin";
+        const char* decompressedFile = "density_mpi_decompressed.bin";
+
+        FILE* compressed_fp = fopen(compressedFile, "rb");
+        if (!compressed_fp) {
+            perror("Error opening compressed file");
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+
+        fseek(compressed_fp, 0, SEEK_END);
+        long compressedSize = ftell(compressed_fp);
+        rewind(compressed_fp);
+
+        //size each rank will handle
+        long localSize = compressedSize / procs;
+        long remainder = compressedSize % procs;
+
+        //correction for last rank
+        if (rank == procs - 1) {
+            localSize += remainder;
+        }
+
+        //position the file pointer for each rank
+        fseek(compressed_fp, rank * localSize, SEEK_SET);
+
+        //read the compressed data for each rank
+        void* compressedData = malloc(localSize);
+        fread(compressedData, 1, localSize, compressed_fp);
+        fclose(compressed_fp);
+
+        //decompression for each rank
+        decompress_and_write(compressedData, localSize, decompressedFile);
+        free(compressedData);
+
+
+    }
     
 
 #ifndef _PERF_
@@ -499,29 +538,7 @@ int main(int argc, char* argv[])
         write_diagnostics(&system, diagnostics_filename);
     }
 
-    //for the decompressed data
-    if(rank == 0 && procs>1){
-
-        const char* compressedFile = "density_mpi_compressed.bin";
-        const char* decompressedFile = "density_mpi_decompressed.bin";
-
-        FILE* compressed_fp = fopen(compressedFile, "rb");
-        if (!compressed_fp) {
-            perror("Error opening compressed file");
-            return 1;
-        }
-
-        fseek(compressed_fp, 0, SEEK_END);
-        long compressedSize = ftell(compressed_fp);
-        rewind(compressed_fp);
-
-        void* compressedData = malloc(compressedSize);
-        fread(compressedData, 1, compressedSize, compressed_fp);
-        fclose(compressed_fp);
-
-        decompress_and_write(compressedData, compressedSize, decompressedFile);
-        free(compressedData);
-    }
+    
     
 #endif
 

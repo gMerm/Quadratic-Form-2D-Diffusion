@@ -33,6 +33,7 @@ clean:
 	rm -r density_mpi.bin 
 	rm -r density_seq.bin
 	rm -r density_mpi_compressed.bin
+	rm -r density_mpi_decompressed.bin
 
 # Execution examples
 
