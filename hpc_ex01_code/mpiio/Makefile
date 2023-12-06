@@ -32,7 +32,7 @@ clean:
 	rm -rf *.dSYM
 	rm -r density_mpi.bin 
 	rm -r density_seq.bin
-	rm -r density_mpi_decompressed.bin
+	rm -r density_mpi_compressed.bin
 
 # Execution examples
 

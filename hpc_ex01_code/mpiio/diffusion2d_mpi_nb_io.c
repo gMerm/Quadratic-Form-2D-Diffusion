@@ -314,175 +314,99 @@ void write_density_mpi(Diffusion2D *D2D, char *filename)
 
 
 
+void compress_data(const void* src, size_t src_size, void* dest, size_t* dest_size) {
 
-
-
-
-//compress data function usin zlib library
-void compress_data(double *input_data, int input_size, double **compressed_data, int *compressed_size) {
-
-    //allocate deflate state, stream
+    //create the stream
     z_stream stream;
     stream.zalloc = Z_NULL;
     stream.zfree = Z_NULL;
     stream.opaque = Z_NULL;
 
-    //check if the initialization has been executed successfully
-    if(deflateInit(&stream, Z_BEST_COMPRESSION) != Z_OK) {
-        fprintf(stderr, "Error initializing zlib.\n");
-        exit(EXIT_FAILURE);
-    }
-    
-        
-    //input
-    stream.next_in = (Bytef *)input_data;
-    stream.avail_in = input_size;
+    //deflate
+    deflateInit(&stream, Z_BEST_COMPRESSION);
 
-    //allocate buffer for compressed data - initialize size
-    int buffer_size = compressBound(stream.avail_in);
-    *compressed_data = (double *)malloc(buffer_size);
+    stream.avail_in = src_size;
+    stream.next_in = (Bytef*)src;
+    stream.avail_out = *dest_size;
+    stream.next_out = (Bytef*)dest;
 
-    //output buffer
-    stream.next_out = (Bytef *)(*compressed_data);
-    stream.avail_out = buffer_size;
+    deflate(&stream, Z_FINISH);
 
-    //compression
-    if(deflate(&stream, Z_FINISH) != Z_STREAM_END) {
-        fprintf(stderr, "Error compressing data\n");
-        exit(EXIT_FAILURE);
-    }
+    *dest_size = stream.total_out;
 
     deflateEnd(&stream);
-    *compressed_size = buffer_size-stream.avail_out;
-
-
 }
 
-//this function will be called from the rank 0 when the density_mpi_compressed.bin
-//has been created, so it decompresses it and after that I will be able to compare it 
-//to the other 2: density_mpi.bin & density_seq.bin
-void decompress_data(const char *source, const char *destination){
-    
-    //create the files
-    FILE *input_file = fopen(source, "rb");
-    if(input_file == NULL) {
-        perror("Error opening input file");
-        exit(EXIT_FAILURE);
-    }
 
-    FILE *output_file = fopen(destination, "wb");
-    if(output_file == NULL) {
-        perror("Error opening output file");
-        fclose(input_file);
-        exit(EXIT_FAILURE);
-    }
-
-    //allocate deflate state, stream
-    z_stream stream;
-    stream.zalloc = Z_NULL;
-    stream.zfree = Z_NULL;
-    stream.opaque = Z_NULL;
-
-    //check if the initialization has been executed successfully
-    if(inflateInit(&stream) != Z_OK) {
-        fprintf(stderr, "Error initializing zlib for decompression.\n");
-        fclose(input_file);
-        fclose(output_file);
-        exit(EXIT_FAILURE);
-    }
-
-    //read input
-    const int chunk_size = 4096;
-    unsigned char in_buffer[chunk_size];
-
-    //allocate memory for the out_buffer
-    unsigned char *out_buffer = (unsigned char *)malloc(chunk_size);
-    if(out_buffer == NULL) {
-        fprintf(stderr, "Error allocating memory for decompressed data.\n");
-        inflateEnd(&stream);
-        fclose(input_file);
-        fclose(output_file);
-        exit(EXIT_FAILURE);
-    }
-
-    do {
-        //read input chunk
-        size_t bytes_read = fread(in_buffer, 1, chunk_size, input_file);
-        if (bytes_read == 0) {
-            break; 
-        }
-
-        stream.avail_in = bytes_read;
-        stream.next_in = in_buffer;
-
-        do {
-            //decompress chunk
-            stream.avail_out = chunk_size;
-            stream.next_out = out_buffer;
-
-            int ret = inflate(&stream, Z_NO_FLUSH);
-            if (ret != Z_OK && ret != Z_STREAM_END) {
-                fprintf(stderr, "Error decompressing data: %s\n", stream.msg ? stream.msg : "unknown error");
-                free(out_buffer);
-                inflateEnd(&stream);
-                fclose(input_file);
-                fclose(output_file);
-                exit(EXIT_FAILURE);
-            }
-
-            //write to dest file
-            size_t bytes_written = fwrite(out_buffer, 1, chunk_size - stream.avail_out, output_file);
-            if (bytes_written == 0) {
-                fprintf(stderr, "Error writing decompressed data to output file.\n");
-                free(out_buffer);
-                inflateEnd(&stream);
-                fclose(input_file);
-                fclose(output_file);
-                exit(EXIT_FAILURE);
-            }
-        } while (stream.avail_out == 0);
-
-    } while (stream.avail_in > 0);
-
-    inflateEnd(&stream);
-    fclose(input_file);
-    fclose(output_file);
-    free(out_buffer);
-
-}
 
 //same with write_density_mpi but with compression
-void write_density_mpi_compressed(Diffusion2D *D2D, char *filename)
-{
-    int real_N_ = D2D->real_N_; /*DIASTASI GRAMMIS +2 GHOST CELLS*/
-    int local_N_ = D2D->local_N_; /*ROWS per PROC*/
+void write_density_mpi_compressed(Diffusion2D *D2D, char *filename){
+    int real_N_ = D2D->real_N_;
+    int local_N_ = D2D->local_N_;
     double *rho_ = D2D->rho_;
     int rank_ = D2D->rank_;
 
-    //compress local buffer
-    double *compressed_data;
-    int compressed_size;
-    compress_data(rho_, local_N_ * real_N_, &compressed_data, &compressed_size);
+    //size for compression
+    size_t uncompressed_size = local_N_ * real_N_ * sizeof(double);
+    size_t compressed_size = compressBound(uncompressed_size);
+    unsigned char *compressed_buffer = (unsigned char*)malloc(compressed_size);
 
-    //len for every rank 
-    MPI_Offset len = real_N_ * sizeof(double);
-    MPI_Offset offset = rank_ * local_N_ * len;
+    //compress buffer
+    compress_data(rho_ + real_N_, uncompressed_size, compressed_buffer, &compressed_size);
+
+    
+    MPI_Offset len = compressed_size;
+    MPI_Offset offset = rank_ * len;
     MPI_Status status;
-
-    //open the file
     MPI_File f;
     MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_WRONLY | MPI_MODE_CREATE, MPI_INFO_NULL, &f);
-
-    //write into the file and change offset so it moves 
-    for (int i=1; i<=local_N_; ++i) {
-        MPI_File_write_at_all(f, offset, compressed_data, compressed_size/sizeof(double), MPI_DOUBLE, &status);
-        offset += len;  
-    }
+    MPI_File_write_at_all(f, offset, compressed_buffer, len, MPI_BYTE, &status);
 
     MPI_File_close(&f);
-    free(compressed_data);
+    free(compressed_buffer);
+}
 
 
+
+void decompress_and_write(const void* src, size_t src_size, const char* output_filename) {
+    
+    //create the stream
+    z_stream stream;
+    stream.zalloc = Z_NULL;
+    stream.zfree = Z_NULL;
+    stream.opaque = Z_NULL;
+
+    //start decompression
+    inflateInit(&stream);
+    stream.avail_in = src_size;
+    stream.next_in = (Bytef*)src;
+
+    FILE* output_fp = fopen(output_filename, "wb");
+    if (!output_fp) {
+        perror("Error opening output file");
+        inflateEnd(&stream);
+        exit(EXIT_FAILURE);
+    }
+
+    unsigned char buffer[1024];
+    do {
+        stream.avail_out = sizeof(buffer);
+        stream.next_out = buffer;
+
+        int ret = inflate(&stream, Z_NO_FLUSH);
+        if (ret == Z_STREAM_ERROR) {
+            perror("Error during decompression");
+            inflateEnd(&stream);
+            fclose(output_fp);
+            exit(EXIT_FAILURE);
+        }
+
+        fwrite(buffer, 1, sizeof(buffer) - stream.avail_out, output_fp);
+
+    } while(stream.avail_out == 0);
+
+    fclose(output_fp);
+    inflateEnd(&stream);
 }
 
 
@@ -577,8 +501,28 @@ int main(int argc, char* argv[])
 
     //for the decompressed data
     if(rank == 0 && procs>1){
-        decompress_data("density_mpi_compressed.bin", "density_mpi_decompressed.bin");
+
+        const char* compressedFile = "density_mpi_compressed.bin";
+        const char* decompressedFile = "density_mpi_decompressed.bin";
+
+        FILE* compressed_fp = fopen(compressedFile, "rb");
+        if (!compressed_fp) {
+            perror("Error opening compressed file");
+            return 1;
+        }
+
+        fseek(compressed_fp, 0, SEEK_END);
+        long compressedSize = ftell(compressed_fp);
+        rewind(compressed_fp);
+
+        void* compressedData = malloc(compressedSize);
+        fread(compressedData, 1, compressedSize, compressed_fp);
+        fclose(compressed_fp);
+
+        decompress_and_write(compressedData, compressedSize, decompressedFile);
+        free(compressedData);
     }
+    
 #endif
 
     MPI_Finalize();
