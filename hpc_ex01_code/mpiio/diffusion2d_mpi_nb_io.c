@@ -313,7 +313,7 @@ void write_density_mpi(Diffusion2D *D2D, char *filename)
 }
 
 
-
+//compress data function using zlib
 void compress_data(const void* src, size_t src_size, void* dest, size_t* dest_size) {
 
     //create the stream
@@ -337,7 +337,7 @@ void compress_data(const void* src, size_t src_size, void* dest, size_t* dest_si
     deflateEnd(&stream);
 }
 
-
+//dicompress buffer and write it to density_mpi_decompressed.bin
 void decompress_and_write(const void* src, size_t src_size, const char* output_filename, MPI_Offset offset,size_t size) {
     
     //create the stream
@@ -346,6 +346,7 @@ void decompress_and_write(const void* src, size_t src_size, const char* output_f
     stream.zfree = Z_NULL;
     stream.opaque = Z_NULL;
     MPI_File out;
+
     //start decompression
     inflateInit(&stream);
     stream.avail_in = src_size;
@@ -362,7 +363,6 @@ void decompress_and_write(const void* src, size_t src_size, const char* output_f
 
     //Move the file pointer to the correct position based on the offset
     //fseek(out, offset, SEEK_SET);
-    int counter =0;
     unsigned char buffer[size];
     int ret;
     do {
@@ -388,13 +388,13 @@ void decompress_and_write(const void* src, size_t src_size, const char* output_f
     inflateEnd(&stream);
 }
 
-//same with write_density_mpi but with compression
+//same with write_density_mpi but with compression and give buffer to decompress_and_write function
 void write_density_mpi_compressed(Diffusion2D *D2D, char *filename){
     int real_N_ = D2D->real_N_;
     int local_N_ = D2D->local_N_;
     double *rho_ = D2D->rho_;
     int rank_ = D2D->rank_;
-    int procs_ = D2D->procs_;
+    
 
     //size for compression
     size_t uncompressed_size = local_N_ * real_N_ * sizeof(double);
@@ -504,10 +504,6 @@ int main(int argc, char* argv[])
         MPI_File_get_position(f_, &base_);
         write_density_mpi_compressed(&system, (char *)"density_mpi_compressed.bin");
         MPI_File_close(&f_);
-
-
-
-        
 
 
     }
