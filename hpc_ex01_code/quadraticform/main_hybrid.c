@@ -16,25 +16,20 @@ int main(int argc, char** argv)
     double *A = (double *)malloc(n*n*sizeof(double));
     double *v = (double *)malloc(n*sizeof(double));
     double *w = (double *)malloc(n*sizeof(double));
+    
 
     double start,end; 
-    double startRes, endRes;
     double result = 0.;
     start = omp_get_wtime(); 
-
-    #pragma omp parallel num_threads(8)
+    
+    #pragma omp parallel num_threads(omp_get_max_threads()) 
     {
-        #pragma omp for
-            //startA=omp_get_wtime();
+        #pragma omp for nowait
             /// init A_ij = (i + 2*j) / n^2
             for (int i=0; i<n; ++i)
                 for (int j=0; j<n; ++j)
                     A[i*n+j] = (i + 2.0*j) / (n*n); 
-            //endA=omp_get_wtime();
-    }
-
-    #pragma omp parallel
-    {
+           
         #pragma omp single nowait
         {
             /// init v_i = 1 + 2 / (i+0.5)
@@ -49,30 +44,32 @@ int main(int argc, char** argv)
                 w[i] = 1.0 - i / (3.0*n);
         }
 
-        
     }
 
-	/// compute
-	double local_res=0.;
-	startRes=omp_get_wtime();
-	#pragma omp parallel firstprivate(local_res) shared(result)
-	{
-		#pragma omp for schedule(dynamic,8) 
-		for (int i=0; i<n; ++i)
-			for (int j=0; j<n; ++j)
-				local_res += v[i] * A[i*n + j] * w[j];
-				
-		#pragma omp critical
-			result += local_res;
 
-	}
-		
-	endRes=omp_get_wtime();
-    
+	/// compute
+
+	#pragma omp parallel
+    {
+        double local_res = 0.0;
+
+        #pragma omp for schedule(dynamic, omp_get_max_threads()) nowait
+        for (int i = 0; i < n; ++i) {
+
+            #pragma omp simd reduction(+:local_res)
+            for (int j = 0; j < n; ++j)
+                local_res += v[i] * A[i * n + j] * w[j];
+        }
+
+        #pragma omp critical
+        result += local_res;
+    }
+
+
 
     end = omp_get_wtime();
 
-    printf("Result = %lf\nTime = %lf\nResult Time = %lf\n", result, end-start, endRes-startRes);
+    printf("Result = %lf && Time = %lf\n", result, end-start);
 
     /// free memory
     free(A);

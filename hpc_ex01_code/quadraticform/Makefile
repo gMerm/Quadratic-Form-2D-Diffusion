@@ -8,18 +8,18 @@ ALL=qf_seq qf_hybrid main_hybrid main_hybrid_mpi
 all: $(ALL)
 
 qf_seq: qf_seq.c
-	$(CC) $(CFLAGS) -o qf_seq qf_seq.c $(LDFLAGS)
-
-qf_hybrid: qf_hybrid.c
-	$(CC) $(CFLAGS) -o qf_hybrid qf_hybrid.c $(LDFLAGS)
+	gcc-13 qf_seq.c -o sequential -fopenmp -O2
 
 main_hybrid: main_hybrid.c
-	gcc-13 -O2 -Wall -o main_hybrid main_hybrid.c -fopenmp
+	gcc-13 main_hybrid.c -o parallelized -fopenmp -O2 -march=native
 
 main_hybrid_mpi: main_hybrid_mpi.c
-	$(CC) $(CFLAGS) -o executable main_hybrid_mpi.c  $(LDFLAGS) 
+	$(CC) $(CFLAGS) -o mpiParallelized main_hybrid_mpi.c  $(LDFLAGS) 
 
 .PHONY: clean
 clean:
 	-rm -f $(ALL)
+	-rm -r parallelized
+	-rm -r sequential
+	-rm -r mpiParallelized
 

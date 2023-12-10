@@ -1,12 +1,12 @@
 make clean
 make
 clear
-echo "\nExecuting Serial: \n"
-
-time ./qf_seq
+echo "Executing Serial: \n"
+time ./sequential 
 
 echo "\nExecuting Parallel: \n"
-time ./main_hybrid
+time ./parallelized 
 
-echo "\nExecuting MPI Parallel: \n"
-time ./executable
+echo "\nExecuting MPI: \n"
+time mpirun -np 4 ./mpiParallelized
+
