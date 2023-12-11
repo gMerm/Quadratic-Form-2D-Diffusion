@@ -8,5 +8,5 @@ echo "\nExecuting Parallel: \n"
 time ./parallelized 
 
 echo "\nExecuting MPI: \n"
-time mpirun -np 4 ./mpiParallelized
+time mpirun -np 8 ./mpiParallelized
 

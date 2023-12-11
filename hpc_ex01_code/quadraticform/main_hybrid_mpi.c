@@ -3,6 +3,7 @@
 #include <time.h>
 #include <omp.h>
 #include <mpi.h>
+#include <math.h>
 
 int main(int argc, char** argv)
 {
@@ -18,9 +19,15 @@ int main(int argc, char** argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     int local_n = n / num_procs;
+    int remainder = n - local_n*num_procs;
     int start = rank * local_n;
     int end = start + local_n;
     double time_start, time_end;
+
+    if(rank==num_procs-1){
+        end = end + remainder;
+        local_n = local_n + remainder;
+    }
 
     // allocate memory
     double *A = (double *)malloc(n * n * sizeof(double));
@@ -65,8 +72,11 @@ int main(int argc, char** argv)
     time_end = MPI_Wtime();
 
     if (rank == 0)
-    {
-        printf("Result = %lf && Time = %lf\n", exit_res, time_end - time_start);
+    {      
+        //for the mflops
+        unsigned long int flops = 6*n*n + 4*n;
+		double mflops = flops / ( (time_end - time_start)*pow(10.0,6.0)*num_procs);
+        printf("Result = %lf && Time = %lf && MFlops: %.6f\n", exit_res, time_end - time_start,mflops);
     }
 
     // free memory
